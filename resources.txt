@@ -1,0 +1,3 @@
+https://www.learnopencv.com/eigenface-using-opencv-c-python/
+https://www.visiondummy.com/2014/04/geometric-interpretation-covariance-matrix
+https://docs.python.org/2/library/os.html
