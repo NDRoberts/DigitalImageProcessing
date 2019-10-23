@@ -50,7 +50,6 @@ def reface(vector):
         for k in range(100):
             result[j,k] = vector[z]
             z += 1
-    print(result)
     return result
 
 
@@ -63,11 +62,47 @@ def subject_means(source):
                            source[offset + 2] + source[offset + 3] + 
                            source[offset + 4]) / 5
         result[subject] = np.uint8(result[subject])
-        cv2.imshow("Pyook", reface(result[subject]))
-        cv2.waitKey()
         subject += 1
         offset += 5
     return result
+
+
+def minus_mean(src, mean):
+    result = np.zeros((len(src),10000))
+    for g in range(len(src)):
+        result[g] = src[g] - mean
+    return result
+
+
+def top_ten_eigs(covariances):
+    result = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    eigen = [0, 0]
+    eigen[0], eigen[1] = np.linalg.eig(covariances)
+    dictum = {0: [0, 0]}
+    for p in range(len(eigen[0])):
+        dictum[eigen[0][p]] = eigen[1][p]
+    print(dictum.keys())
+    ranked = (sorted(dictum))
+    print(ranked)
+    print("ZA BIGGESTO:", ranked[len(ranked)-1])
+    print("The ranked list is", len(ranked), "poonits long.")
+    print("Meanwhile, the covariance matrix was", len(covariances), "poonits wide.")
+    for o in range(10):
+        print(len(dictum))
+        print(len(ranked))
+        print(len(ranked)-o-1)
+        result[o] = dictum[ranked[len(ranked)-o-1]]
+    return result
+    #max_vec = []
+    #max_val = eigenvals[0]
+    #max_i = 0
+    #for i in range(len(eigenvals)):
+    #    if eigenvals[i] > max_val:
+    #        max_val = eigenvals[i]
+    #        max_i = i
+    #max_vec = eigenvects[max_i]
+    #return (max_i, max_val, max_vec)
+
 
 #------------------------------------------------------------------------------
 
@@ -95,3 +130,7 @@ v_mean = np.uint8(v_mean / A.shape[0])
 cv2.imshow("Horrortown", reface(v_mean))
 cv2.waitKey()
 sub_mean = subject_means(A)
+M = minus_mean(A, v_mean)
+C = np.cov(M)
+
+print(top_ten_eigs(C))
