@@ -8,28 +8,17 @@ VECTOR_LENGTH = 10000
 
 
 def populate_data(target):
-
-    images = {}
-    images['entries'] = 0
-    images['subjects'] = 0
-    images[images['subjects']] = {}
-    images[images['subjects']]['average'] = []
-
-    img_num = 0
-
+    raw_data = dict()
     for file in os.listdir(target):
-        if img_num >= 5:
-            images['subjects'] += 1
-            images[images['subjects']] = {}
-            img_num = 0
+        fname = file[0:8]
+        subject = file[0:4]
+        img_num = file[5:8]
         path = target + file
         im = cv2.imread(path)
-        images[images['subjects']][img_num] = im
-        images['entries'] += 1
-        img_num += 1
-    images['subjects'] += 2
-    return images
-
+        if subject not in raw_data:
+            raw_data[subject] = {}
+        raw_data[subject][img_num] = im
+    return raw_data
 
 
 def vectorize(image):
@@ -53,6 +42,15 @@ def reface(vector):
     return result
 
 
+def mean_vector(matrix):
+    l = len(matrix)
+    result = np.zeros(len(matrix[0]))
+    for i in range(l):
+        result += matrix[i]
+    result /= l
+    return result
+
+
 def subject_means(source):
     result = {}
     offset = 0
@@ -67,41 +65,14 @@ def subject_means(source):
     return result
 
 
-def minus_mean(src, mean):
-    result = np.zeros((len(src),10000))
-    for g in range(len(src)):
-        result[g] = src[g] - mean
-    return result
-
-
-def top_ten_eigs(covariances):
-    result = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+def best_eigs(covariances):
+    result = []
     eigen = [0, 0]
     eigen[0], eigen[1] = np.linalg.eig(covariances)
-    dictum = {0: [0, 0]}
-    for p in range(len(eigen[0])):
-        dictum[eigen[0][p]] = eigen[1][p]
-    print(dictum.keys())
-    ranked = (sorted(dictum))
-    print(ranked)
-    print("ZA BIGGESTO:", ranked[len(ranked)-1])
-    print("The ranked list is", len(ranked), "poonits long.")
-    print("Meanwhile, the covariance matrix was", len(covariances), "poonits wide.")
-    for o in range(10):
-        print(len(dictum))
-        print(len(ranked))
-        print(len(ranked)-o-1)
-        result[o] = dictum[ranked[len(ranked)-o-1]]
+    for e in range(len(eigen[0])):
+        if eigen[0][e] >= 0:
+            result.append(eigen[1][e])
     return result
-    #max_vec = []
-    #max_val = eigenvals[0]
-    #max_i = 0
-    #for i in range(len(eigenvals)):
-    #    if eigenvals[i] > max_val:
-    #        max_val = eigenvals[i]
-    #        max_i = i
-    #max_vec = eigenvects[max_i]
-    #return (max_i, max_val, max_vec)
 
 
 #------------------------------------------------------------------------------
@@ -109,28 +80,22 @@ def top_ten_eigs(covariances):
 print("Parsing face dataset...")
 
 faces = populate_data('./Dataset/enrolling/')
+print("Read complete.")
+print("Subjects:", len(faces)+1)
+print("Images per subject:", len(faces['ID01']))
 
+
+'''
 print("Read complete.")
 print("Subjects:", faces['subjects'])
 print("Total images:", faces['entries'])
 
-A = np.zeros((faces['entries'], 10000), dtype=np.uint8)
+avg_faces = subject_means(faces)
 
-o = 0
+overall_avg = mean_vector(faces)
 
-for s in range(faces['subjects'] - 1):
-    for p in range(5):
-        A[o] = vectorize(faces[s][p])
-        o += 1
+big_A = np.empty((faces['subjects'], VECTOR_LENGTH))
 
-v_mean = np.zeros(10000)
-for i in range(A.shape[0]):
-    v_mean += A[i]
-v_mean = np.uint8(v_mean / A.shape[0])
-cv2.imshow("Horrortown", reface(v_mean))
-cv2.waitKey()
-sub_mean = subject_means(A)
-M = minus_mean(A, v_mean)
-C = np.cov(M)
-
-print(top_ten_eigs(C))
+for t in range(faces['subjects']):
+    big_A[t] = avg_faces[t] - overall_avg
+'''
