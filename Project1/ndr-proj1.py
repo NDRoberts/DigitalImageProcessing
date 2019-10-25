@@ -18,6 +18,7 @@ def populate_data(target):
         if subject not in raw_data:
             raw_data[subject] = {}
         raw_data[subject][img_num] = im
+        print("This image has type", type(im[0,0,0]))
     return raw_data
 
 
@@ -25,9 +26,10 @@ def vectorize(image):
     width, height, depth = image.shape[0:3]
     result = np.zeros((width * height), dtype=np.uint8)
     index = 0
+    yek = cv2.cvtColor(image, cv2.COLOR_BGR2YUV)
     for m in range(width):
         for n in range(height):
-            result[index] = image[m,n,0]
+            result[index] = yek[m,n,0]
             index += 1
     return result
 
@@ -42,26 +44,25 @@ def reface(vector):
     return result
 
 
-def mean_vector(matrix):
-    l = len(matrix)
-    result = np.zeros(len(matrix[0]))
-    for i in range(l):
-        result += matrix[i]
-    result /= l
+def mean_vector(source):
+    result = np.zeros(VECTOR_LENGTH)
+    i = 0
+    for sub in source:
+        for img in source[sub]:
+            result += vectorize(source[sub][img])
+            i += 1
+    result = np.uint8(result / i)
     return result
 
 
 def subject_means(source):
     result = {}
-    offset = 0
-    subject = 1
-    while offset < len(source):
-        result[subject] = (source[offset] + source[offset + 1] + 
-                           source[offset + 2] + source[offset + 3] + 
-                           source[offset + 4]) / 5
-        result[subject] = np.uint8(result[subject])
-        subject += 1
-        offset += 5
+    avec = np.zeros(VECTOR_LENGTH, dtype=np.uint8)
+    for sub in source:
+        for img in source[sub]:
+            avec += vectorize(source[sub][img])
+        avec = np.uint8(avec / len(sub))
+        result[sub] = avec
     return result
 
 
@@ -83,6 +84,28 @@ faces = populate_data('./Dataset/enrolling/')
 print("Read complete.")
 print("Subjects:", len(faces)+1)
 print("Images per subject:", len(faces['ID01']))
+
+averages = subject_means(faces)
+print("Total averages produced:", len(averages)+1)
+print("Length of each average:", averages['ID01'].shape[0])
+print("First average, he looka like", averages['ID01'])
+
+#for f in averages:
+#    cv2.imshow("HOORS", reface(averages[f]))
+#    cv2.waitKey()
+
+o_mean = mean_vector(faces)
+print("Showing da AVERGE", o_mean)
+cv2.imshow("AVERGE", reface(o_mean))
+cv2.waitKey()
+
+eigenturkey = {}
+for sub in averages:
+    eigenturkey[sub] = (averages[sub] - o_mean)
+
+for f in eigenturkey:
+    cv2.imshow("HOORS", reface(eigenturkey[f]))
+    cv2.waitKey()
 
 
 '''
