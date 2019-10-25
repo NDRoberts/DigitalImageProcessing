@@ -18,7 +18,6 @@ def populate_data(target):
         if subject not in raw_data:
             raw_data[subject] = {}
         raw_data[subject][img_num] = im
-        print("This image has type", type(im[0,0,0]))
     return raw_data
 
 
@@ -82,43 +81,33 @@ print("Parsing face dataset...")
 
 faces = populate_data('./Dataset/enrolling/')
 print("Read complete.")
-print("Subjects:", len(faces)+1)
+subjects = len(faces)+1
+print("Subjects:", subjects)
 print("Images per subject:", len(faces['ID01']))
 
 averages = subject_means(faces)
 print("Total averages produced:", len(averages)+1)
 print("Length of each average:", averages['ID01'].shape[0])
 print("First average, he looka like", averages['ID01'])
-
-#for f in averages:
-#    cv2.imshow("HOORS", reface(averages[f]))
-#    cv2.waitKey()
+avg_mat = np.empty((subjects, VECTOR_LENGTH))
+i = 0
+for sub in averages:
+    avg_mat[i] = averages[sub]
+    i += 1
 
 o_mean = mean_vector(faces)
-print("Showing da AVERGE", o_mean)
-cv2.imshow("AVERGE", reface(o_mean))
-cv2.waitKey()
 
-eigenturkey = {}
-for sub in averages:
-    eigenturkey[sub] = (averages[sub] - o_mean)
+plt.plot(o_mean)
+plt.ylabel('dis bitch')
+plt.show
 
-for f in eigenturkey:
-    cv2.imshow("HOORS", reface(eigenturkey[f]))
-    cv2.waitKey()
+X_flat_centered = np.zeros((subjects, VECTOR_LENGTH))
+for a in range(subjects):
+    X_flat_centered[a] = np.clip((avg_mat[a] - o_mean),0,255)
 
+covars = np.cov(X_flat_centered.T)
+eigenvals, eigenvects = np.linalg.eigh(covars)
+ordered_eigenvals = eigenvals[::-1]
+ordered_eigenvects = np.fliplr(eigenvects)
 
-'''
-print("Read complete.")
-print("Subjects:", faces['subjects'])
-print("Total images:", faces['entries'])
-
-avg_faces = subject_means(faces)
-
-overall_avg = mean_vector(faces)
-
-big_A = np.empty((faces['subjects'], VECTOR_LENGTH))
-
-for t in range(faces['subjects']):
-    big_A[t] = avg_faces[t] - overall_avg
-'''
+weight_a = np.dot(X_flat_centered, ordered_eigenvects.T[:subjects].T)
