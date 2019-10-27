@@ -88,7 +88,6 @@ print("Images per subject:", len(faces['ID01']))
 averages = subject_means(faces)
 print("Total averages produced:", len(averages)+1)
 print("Length of each average:", averages['ID01'].shape[0])
-print("First average, he looka like", averages['ID01'])
 avg_mat = np.empty((subjects, VECTOR_LENGTH))
 i = 0
 for sub in averages:
@@ -97,17 +96,25 @@ for sub in averages:
 
 o_mean = mean_vector(faces)
 
-plt.plot(o_mean)
-plt.ylabel('dis bitch')
-plt.show
-
-X_flat_centered = np.zeros((subjects, VECTOR_LENGTH))
+big_A = np.zeros((subjects, VECTOR_LENGTH))
 for a in range(subjects):
-    X_flat_centered[a] = np.clip((avg_mat[a] - o_mean),0,255)
+    big_A[a] = np.clip((avg_mat[a] - o_mean),0,255)
 
-covars = np.cov(X_flat_centered.T)
+# a_trans_a = np.dot(big_A.T, big_A)
+# e_vals, e_vects = np.linalg.eigh(a_trans_a)
+# wt_a = np.dot(e_vects.T, a_trans_a)
+
+# eigenface = np.dot(big_A, e_vects)
+
+covars = np.cov(big_A.T)
 eigenvals, eigenvects = np.linalg.eigh(covars)
 ordered_eigenvals = eigenvals[::-1]
 ordered_eigenvects = np.fliplr(eigenvects)
 
-weight_a = np.dot(X_flat_centered, ordered_eigenvects.T[:subjects].T)
+weight_a = np.dot(big_A, ordered_eigenvects.T[:subjects].T)
+
+np.save('wt_a.npy', weight_a)
+np.save('mean_vect.npy', o_mean)
+
+plt.plot(weight_a)
+plt.show()
