@@ -173,9 +173,6 @@ print("A dims:", A.shape)
 P = np.dot(A, A.T)
 print("P dims:", P.shape)
 
-plt.plot(reface(P[0]))
-plt.show()
-
 wt_A = np.dot(P.T, A)
 print("wt_A dims:", wt_A.shape)
 
@@ -183,13 +180,10 @@ print("Parsing test dataset...")
 test_set = populate_data('./Dataset/testing/')
 print("Read complete.")
 
-tvec = 0
-big_B = np.zeros((215, VECTOR_LENGTH))
+big_B = np.zeros(215, VECTOR_LENGTH)
 for sub in test_set:
     for im in test_set[sub]:
-        big_B[tvec] = envector(test_set[sub][im])
-print("B ends with", big_B[214])
-print("B maxes out at", max(big_B[214]))
+
 
 
 # e_vals, P2 = np.linalg.eigh(np.dot(A.T, A))
