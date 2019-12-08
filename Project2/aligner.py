@@ -60,28 +60,21 @@ def compare_horiz(src, pt_a, pt_b):
     return (a_weight, b_weight)
 
 
-def main():
-    # Load an image, make a copy to fiddle with
-    file_path = './janky3.bmp'
-    original = cv2.imread(file_path)
-    image = np.copy(original)
-    im_height, im_width = image.shape[0:2]
-    cv2.imshow("Original", image)
-    cv2.waitKey()
-
+def get_outer_edges(image):
+    '''Determine which edges represent the outer bounds of the image'''
     # Convert image to grayscale for edge-finding and luminance comparison
+    visual = np.copy(image)
     grays = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     min_threshold = 253
     max_threshold = 255
     edges = cv2.Canny(grays, min_threshold, max_threshold, apertureSize=3)
     outer_edges = []
-
     # Use linear Hough transform to find lines in the image
+    im_height, im_width = image.shape[0:2]
     min_line_length = min(im_width, im_height) * 0.9
     max_line_gap = min_line_length * 0.9
     votes_required = 1
     lines = cv2.HoughLines(edges, 1, np.pi / 180, votes_required, min_line_length, max_line_gap)
-
     # Examine the most likely lines found
     for ln in range(10):
         for rho, theta in lines[ln]:
@@ -91,7 +84,6 @@ def main():
                 print(theta, rho, " - I think line ", ln, "is a HORIZONTAL.")
             else:
                 print(theta, rho, " - I don't think line", ln, "is useful.")
-
             a = np.cos(theta)
             b = np.sin(theta)
             x0 = a * rho
@@ -100,14 +92,9 @@ def main():
             y1 = int(y0 + 1000*(a))
             x2 = int(x0 - 1000*(-b))
             y2 = int(y0 - 1000*(a))
-
-            x3 = 0
-            y3 = 0
-            x4 = im_width
-            y4 = im_height
-
+            
             pt_0 = (x0, y0)
-            cv2.circle(image, pt_0, 4, (0,255,0), 2)
+            cv2.circle(visual, pt_0, 4, (0,255,0), 2)
 
             # Determine the point at which the current line intersects the image boundaries
             #     (Formula courtesy of Wikipedia)
@@ -119,10 +106,11 @@ def main():
             # )
             # For TOP intercept, x3 = 0, x4 = im_width, y3 = 0, y4 = 0
 
+            # If the X or Y coordinate remains the same, the line is perfectly vertical 
+            # or horizontal, and is unlikely to be relevant to alignment
             if x1 == x2 or y1 == y2:
                 print("DANGER WILL ROBINSON")
                 continue
-                
 
             # print("Coordinates: x1 =", x1, "   y1 =", y1, "   x2 =", x2, "   y2 =", y2)
             top_intercept = (
@@ -195,45 +183,61 @@ def main():
                 print(f"I am confident that line {ln} is an outer edge.")
                 outer_edges.append(theta)
 
-            cv2.line(image,(x1,y1),(x2,y2),(0,0,255),2)
-            cv2.imshow(f'img {ln}', image)
+            cv2.line(visual,(x1,y1),(x2,y2),(0,0,255),2)
+            cv2.imshow(f'img {ln}', visual)
             cv2.waitKey()
 
+    return outer_edges
+
+
+def align(image, edge_set):
+    '''Use a set of outer edges to properly align a crooked image'''
     # If only one outer edge found, assume it is to be used for alignment
-    if len(outer_edges) == 1:
-        print("I only found one outer edge, at angle", outer_edges[0])
+    if len(edge_set) == 1:
+        print("I only found one outer edge, at angle", edge_set[0])
         print("So I guess that's what I'll align to.")
-        bangle = outer_edges[0] * 100
+        bangle = edge_set[0] * 100
         # Image should be rotated slightly right or slightly left, based on angle
         if( (bangle >= 143 and bangle <= 157) or
             (bangle >= 300 and bangle <= 314) or
             (bangle >= 457 and bangle <= 471) or
             (bangle >= 614 and bangle <= 628)):
-            align_to = 180 + (180/np.pi) * outer_edges[0] 
-            align_to = (180/np.pi) * outer_edges[0]
+            align_to = 180 + (180/np.pi) * edge_set[0] 
+            align_to = (180/np.pi) * edge_set[0]
         elif( (bangle >= 0 and bangle <= 14) or
             (bangle >= 157 and bangle <= 171) or
             (bangle >= 314 and bangle <= 328) or
             (bangle >= 471 and bangle <= 485)):
-            align_to = (180/np.pi) * outer_edges[0]
-        rotated = imutils.rotate(original, align_to)
-        
+            align_to = (180/np.pi) * edge_set[0]
+        rotated = imutils.rotate(image, align_to)
         print("C'est bien?")
         cv2.imshow("Rotated image", rotated)
         cv2.waitKey()
-
-
     # If exactly 2 outer edges found, determine whether intersection is likely to be a corner
-    if len(outer_edges) == 2:
-        print("I found outer edges at angles", outer_edges[0], "and", outer_edges[1])
-        corner_angle = np.abs(outer_edges[0] - outer_edges[1])
+    elif len(edge_set) == 2:
+        print("I found outer edges at angles", edge_set[0], "and", edge_set[1])
+        corner_angle = np.abs(edge_set[0] - edge_set[1])
         print("The difference between their angles is", corner_angle)
         if corner_angle >= 1.518 and corner_angle <= 1.623:
             print("That's close to 90 degrees, so I think I'll use it for alignment.")
-            rotated = imutils.rotate(original, (180/np.pi) * outer_edges[0])
+            rotated = imutils.rotate(image, (180/np.pi) * edge_set[0])
             print("How does this look?")
             cv2.imshow("Rotated image", rotated)
             cv2.waitKey()
+    else:
+        print("Something has gone wrong. I did not find an appropriate number of edges.")
+    return rotated
 
+def main():
+    # Load an image, make a copy to fiddle with
+    file_path = './images/janky3.bmp'
+    image = cv2.imread(file_path)
+    cv2.imshow("Original", image)
+    cv2.waitKey()
+    outer_edges = get_outer_edges(image)
+    result = align(image, outer_edges)
+    cv2.imwrite('./results/the_result.png', result)
+
+    
 if __name__ == '__main__':
     main()
