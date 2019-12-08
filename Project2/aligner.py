@@ -1,4 +1,5 @@
 import cv2
+import glob
 import imutils
 import math
 import numpy as np
@@ -78,12 +79,12 @@ def get_outer_edges(image):
     # Examine the most likely lines found
     for ln in range(10):
         for rho, theta in lines[ln]:
-            if (is_vertical(theta)):
-                print(theta, rho, " - I think line ", ln, "is a VERTICAL.")
-            elif (is_horizontal(theta)):
-                print(theta, rho, " - I think line ", ln, "is a HORIZONTAL.")
-            else:
-                print(theta, rho, " - I don't think line", ln, "is useful.")
+            # if (is_vertical(theta)):
+            #     print(theta, rho, " - I think line ", ln, "is a VERTICAL.")
+            # elif (is_horizontal(theta)):
+            #     print(theta, rho, " - I think line ", ln, "is a HORIZONTAL.")
+            # else:
+            #     print(theta, rho, " - I don't think line", ln, "is useful.")
             a = np.cos(theta)
             b = np.sin(theta)
             x0 = a * rho
@@ -109,7 +110,7 @@ def get_outer_edges(image):
             # If the X or Y coordinate remains the same, the line is perfectly vertical 
             # or horizontal, and is unlikely to be relevant to alignment
             if x1 == x2 or y1 == y2:
-                print("DANGER WILL ROBINSON")
+                # print("DANGER WILL ROBINSON")
                 continue
 
             # print("Coordinates: x1 =", x1, "   y1 =", y1, "   x2 =", x2, "   y2 =", y2)
@@ -180,12 +181,12 @@ def get_outer_edges(image):
 
             # If one side or the other (but not both) is mostly white, the line is probably an outer edge
             if (side_a > 225 or side_b > 225) and (np.abs(side_a - side_b) > 40):
-                print(f"I am confident that line {ln} is an outer edge.")
+                # print(f"I am confident that line {ln} is an outer edge.")
                 outer_edges.append(theta)
 
-            cv2.line(visual,(x1,y1),(x2,y2),(0,0,255),2)
-            cv2.imshow(f'img {ln}', visual)
-            cv2.waitKey()
+            # cv2.line(visual,(x1,y1),(x2,y2),(0,0,255),2)
+            # cv2.imshow(f'img {ln}', visual)
+            # cv2.waitKey()
 
     return outer_edges
 
@@ -197,7 +198,7 @@ def align(image, edge_set):
         print("I only found one outer edge, at angle", edge_set[0])
         print("So I guess that's what I'll align to.")
         bangle = edge_set[0] * 100
-        # Image should be rotated slightly right or slightly left, based on angle
+        # Image should be rotated slightly clockwise or anticlockwise, based on angle
         if( (bangle >= 143 and bangle <= 157) or
             (bangle >= 300 and bangle <= 314) or
             (bangle >= 457 and bangle <= 471) or
@@ -213,6 +214,7 @@ def align(image, edge_set):
         print("C'est bien?")
         cv2.imshow("Rotated image", rotated)
         cv2.waitKey()
+    
     # If exactly 2 outer edges found, determine whether intersection is likely to be a corner
     elif len(edge_set) == 2:
         print("I found outer edges at angles", edge_set[0], "and", edge_set[1])
@@ -229,7 +231,23 @@ def align(image, edge_set):
     return rotated
 
 def main():
-    # Load an image, make a copy to fiddle with
+    # Load the images in a directory, align them, write to output folder
+    image_list = glob.glob('./images/*.bmp')
+    image_list.sort()
+    image_set = [cv2.imread(img) for img in image_list]
+    # Sorting/reading based on code by StackOverflow user ClydeTheGhost
+    # https://stackoverflow.com/questions/38675389/python-opencv-how-to-load-all-images-from-folder-in-alphabetical-order
+    num_aligned = 0
+    for img in image_set:
+        print("Regarding image", num_aligned+1, "-")
+        cv2.imshow("Original", img)
+        cv2.waitKey()
+        outer_edges = get_outer_edges(img)
+        result = align(img, outer_edges)
+        num_aligned += 1
+        number = '{:0>4d}'.format(num_aligned)
+        cv2.imwrite('./results/' + number + '.png', result)
+
     file_path = './images/janky3.bmp'
     image = cv2.imread(file_path)
     cv2.imshow("Original", image)
