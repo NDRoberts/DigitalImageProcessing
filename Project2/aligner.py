@@ -76,6 +76,7 @@ def get_outer_edges(image):
     max_line_gap = min_line_length * 0.9
     votes_required = 1
     lines = cv2.HoughLines(edges, 1, np.pi / 180, votes_required, min_line_length, max_line_gap)
+    # Hough Transform sequence based on code by Robb Hill
     # Examine the most likely lines found
     for ln in range(10):
         for rho, theta in lines[ln]:
@@ -194,11 +195,20 @@ def get_outer_edges(image):
 def align(image, edge_set):
     '''Use a set of outer edges to properly align a crooked image'''
     # If only one outer edge found, assume it is to be used for alignment
+    shift = [None]
+    shift[0:15] = 0
+    shift[143:158]
+    shift[158:172]
+    shift[300:315]
+    shift[315:329]
+    shift[457:472]
+    shift[472:486]
+    shift[614:629]
     if len(edge_set) == 1:
         print("I only found one outer edge, at angle", edge_set[0])
         print("So I guess that's what I'll align to.")
         bangle = edge_set[0] * 100
-        # Image should be rotated slightly clockwise or anticlockwise, based on angle
+        # Image should be rotated clockwise or anticlockwise, depending on angle
         if( (bangle >= 143 and bangle <= 157) or
             (bangle >= 300 and bangle <= 314) or
             (bangle >= 457 and bangle <= 471) or
