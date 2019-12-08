@@ -20,7 +20,7 @@ def is_horizontal(angle):
 def compare_vert(src, pt_a, pt_b):
     """Compare the average luminosities of either side of a near-vertical line"""
     height, width = src.shape[0:2]
-    comparison_offset = int(min(height, width) / 100)
+    comparison_offset = int(min(height, width) / 200)
     a_weight, b_weight, total = 0, 0, 0
     x, y = pt_a
     dy = pt_b[1] - pt_a[1]
@@ -42,7 +42,7 @@ def compare_vert(src, pt_a, pt_b):
 def compare_horiz(src, pt_a, pt_b):
     """Compare the average luminosities of either side of a near-vertical line"""
     height, width = src.shape[0:2]
-    comparison_offset = int(min(height, width) / 100)
+    comparison_offset = int(min(height, width) / 200)
     a_weight, b_weight, total = 0, 0, 0
     x, y = pt_a
     dy = pt_b[1] - pt_a[1]
@@ -181,13 +181,13 @@ def get_outer_edges(image):
                 side_a, side_b = compare_horiz(grays, left_intercept, right_intercept)
 
             # If one side or the other (but not both) is mostly white, the line is probably an outer edge
-            if (side_a > 225 or side_b > 225) and (np.abs(side_a - side_b) > 40):
-                # print(f"I am confident that line {ln} is an outer edge.")
-                outer_edges.append(theta)
-
-            # cv2.line(visual,(x1,y1),(x2,y2),(0,0,255),2)
-            # cv2.imshow(f'img {ln}', visual)
-            # cv2.waitKey()
+            if (side_a > 235 or side_b > 235) and (np.abs(side_a - side_b) > 25):
+                print(f"I am confident that line {ln} is an outer edge.")
+                outer_edges.append((rho, theta))
+            print(f"Angle of current line: {theta}")
+            cv2.line(visual,(x1,y1),(x2,y2),(0,0,255),2)
+            cv2.imshow(f'img {ln}', visual)
+            cv2.waitKey()
 
     return outer_edges
 
@@ -195,19 +195,36 @@ def get_outer_edges(image):
 def align(image, edge_set):
     '''Use a set of outer edges to properly align a crooked image'''
     # If only one outer edge found, assume it is to be used for alignment
-    shift = [None]
-    shift[0:15] = 0
-    shift[143:158]
-    shift[158:172]
-    shift[300:315]
-    shift[315:329]
-    shift[457:472]
-    shift[472:486]
-    shift[614:629]
-    if len(edge_set) == 1:
+    bangle = edge_set[0][0] * 100
+    dangle = (180/np.pi) * edge_set[0][0]
+    print("BigAngle =", bangle, "    DegreeAngle =", dangle)
+    shift = np.zeros(629)
+    for i in range(629):
+        if i < 15:
+            shift[i] = 0
+        elif i in range(143, 158):
+            shift[i] = 0
+        elif i in range(158,172):
+            shift[i] = 0
+        elif i in range(300,315):
+            shift[i] = 0
+        elif i in range(315,329):
+            shift[i] = 0
+        elif i in range(457,572):
+            shift[i] = 0
+        elif i in range(472,486):
+            shift[i] = 0
+        elif i in range(614,629):
+            shift[i] = 0
+
+    print(edge_set)
+    if edge_set is None or len(edge_set) < 1:
+        print("Oh no, Don Ho!")
+        return None
+
+    elif len(edge_set) == 1:
         print("I only found one outer edge, at angle", edge_set[0])
         print("So I guess that's what I'll align to.")
-        bangle = edge_set[0] * 100
         # Image should be rotated clockwise or anticlockwise, depending on angle
         if( (bangle >= 143 and bangle <= 157) or
             (bangle >= 300 and bangle <= 314) or
@@ -237,12 +254,14 @@ def align(image, edge_set):
             cv2.imshow("Rotated image", rotated)
             cv2.waitKey()
     else:
-        print("Something has gone wrong. I did not find an appropriate number of edges.")
+        rotated = imutils.rotate(image, dangle + shift[int(bangle)])
+        cv2.imshow("Rotated Image", rotated)
+        cv2.waitKey()
     return rotated
 
 def main():
     # Load the images in a directory, align them, write to output folder
-    image_list = glob.glob('./images/*.bmp')
+    image_list = glob.glob('./images/*.png')
     image_list.sort()
     image_set = [cv2.imread(img) for img in image_list]
     # Sorting/reading based on code by StackOverflow user ClydeTheGhost
@@ -257,14 +276,8 @@ def main():
         num_aligned += 1
         number = '{:0>4d}'.format(num_aligned)
         cv2.imwrite('./results/' + number + '.png', result)
-
-    file_path = './images/janky3.bmp'
-    image = cv2.imread(file_path)
-    cv2.imshow("Original", image)
-    cv2.waitKey()
-    outer_edges = get_outer_edges(image)
-    result = align(image, outer_edges)
-    cv2.imwrite('./results/the_result.png', result)
+        cv2.destroyAllWindows()
+        # exit(0)
 
     
 if __name__ == '__main__':
