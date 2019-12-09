@@ -7,15 +7,17 @@ import numpy as np
 
 def is_vertical(angle):
     """Assess whether the angle is close to being vertical"""
-    if ((angle < 0.14) or (angle > 6.14) or (angle > 3.00 and angle < 3.28)):
+    if ((angle < 0.28) or (angle > 6.00) or (angle > 2.86 and angle < 3.42)):
         return True
     return False
 
+
 def is_horizontal(angle):
     """Assess whether the angle is close to being horizontal"""
-    if ((angle > 1.43 and angle < 1.71) or (angle > 4.57 and angle < 4.85)):
+    if ((angle > 1.29 and angle < 1.85) or (angle > 4.43 and angle < 4.99)):
         return True
     return False
+
 
 def compare_vert(src, pt_a, pt_b):
     """Compare the average luminosities of either side of a near-vertical line"""
@@ -182,81 +184,102 @@ def get_outer_edges(image):
 
             # If one side or the other (but not both) is mostly white, the line is probably an outer edge
             if (side_a > 235 or side_b > 235) and (np.abs(side_a - side_b) > 25):
-                print(f"I am confident that line {ln} is an outer edge.")
+                # print(f"I am confident that line {ln} is an outer edge.")
                 outer_edges.append((rho, theta))
             print(f"Angle of current line: {theta}")
-            cv2.line(visual,(x1,y1),(x2,y2),(0,0,255),2)
-            cv2.imshow(f'img {ln}', visual)
-            cv2.waitKey()
+            # cv2.line(visual,(x1,y1),(x2,y2),(0,0,255),2)
+            # cv2.imshow(f'img {ln}', visual)
+            # cv2.waitKey()
 
     return outer_edges
 
 
 def align(image, edge_set):
     '''Use a set of outer edges to properly align a crooked image'''
-    # If only one outer edge found, assume it is to be used for alignment
-    bangle = edge_set[0][0] * 100
-    dangle = (180/np.pi) * edge_set[0][0]
-    print("BigAngle =", bangle, "    DegreeAngle =", dangle)
-    shift = np.zeros(629)
-    for i in range(629):
-        if i < 15:
-            shift[i] = 0
-        elif i in range(143, 158):
-            shift[i] = 0
-        elif i in range(158,172):
-            shift[i] = 0
-        elif i in range(300,315):
-            shift[i] = 0
-        elif i in range(315,329):
-            shift[i] = 0
-        elif i in range(457,572):
-            shift[i] = 0
-        elif i in range(472,486):
-            shift[i] = 0
-        elif i in range(614,629):
-            shift[i] = 0
-
+    height, width = image.shape[0:2]
+    # If no outer edges have been found, something has gone terribly wrong
     print(edge_set)
     if edge_set is None or len(edge_set) < 1:
         print("Oh no, Don Ho!")
         return None
 
-    elif len(edge_set) == 1:
-        print("I only found one outer edge, at angle", edge_set[0])
-        print("So I guess that's what I'll align to.")
-        # Image should be rotated clockwise or anticlockwise, depending on angle
-        if( (bangle >= 143 and bangle <= 157) or
-            (bangle >= 300 and bangle <= 314) or
-            (bangle >= 457 and bangle <= 471) or
-            (bangle >= 614 and bangle <= 628)):
-            align_to = 180 + (180/np.pi) * edge_set[0] 
-            align_to = (180/np.pi) * edge_set[0]
-        elif( (bangle >= 0 and bangle <= 14) or
-            (bangle >= 157 and bangle <= 171) or
-            (bangle >= 314 and bangle <= 328) or
-            (bangle >= 471 and bangle <= 485)):
-            align_to = (180/np.pi) * edge_set[0]
-        rotated = imutils.rotate(image, align_to)
-        print("C'est bien?")
-        cv2.imshow("Rotated image", rotated)
-        cv2.waitKey()
+    # If only one outer edge found, assume it is to be used for alignment
+    bangle = edge_set[0][1] * 100
+    dangle = (180/np.pi) * edge_set[0][1]
+    print("BigAngle =", bangle, "    DegreeAngle =", dangle)
+    shift = np.zeros((629, 2))
+    # Table of adjustment values for rotation; depends on quadrant, which involves rho
+    # Each region has two values - one for rho position < line, one for rho pos. > line
+    for i in range(629):
+        if i < 28:
+            shift[i] = [0, 0]
+        elif i in range(129, 158):
+            shift[i] = [90, 270]
+        elif i in range(158,186):
+            shift[i] = [90, 270]
+        elif i in range(286,315):
+            shift[i] = [180, 180]
+        elif i in range(315,342):
+            shift[i] = [0, 0]
+        elif i in range(443,472):
+            shift[i] = [0, 0]
+        elif i in range(472,499):
+            shift[i] = [0, 0]
+        elif i in range(600,629):
+            shift[i] = [0, 0]
+
+    # elif len(edge_set) == 1:
+    #     print("I only found one outer edge, at angle", edge_set[0][1])
+    #     print("So I guess that's what I'll align to.")
+    #     # Image should be rotated clockwise or anticlockwise, depending on angle
+    #     if( (bangle >= 143 and bangle <= 157) or
+    #         (bangle >= 300 and bangle <= 314) or
+    #         (bangle >= 457 and bangle <= 471) or
+    #         (bangle >= 614 and bangle <= 628)):
+    #         align_to = 180 + (180/np.pi) * edge_set[0][1]
+    #         align_to = (180/np.pi) * edge_set[0][1]
+    #     elif( (bangle >= 0 and bangle <= 14) or
+    #         (bangle >= 157 and bangle <= 171) or
+    #         (bangle >= 314 and bangle <= 328) or
+    #         (bangle >= 471 and bangle <= 485)):
+    #         align_to = (180/np.pi) * edge_set[0][1]
+    #     align_to += 180
+    #     rotated = imutils.rotate(image, align_to)
+    #     print("C'est bien?")
+    #     cv2.imshow("Rotated image", rotated)
+    #     cv2.waitKey()
     
-    # If exactly 2 outer edges found, determine whether intersection is likely to be a corner
-    elif len(edge_set) == 2:
-        print("I found outer edges at angles", edge_set[0], "and", edge_set[1])
-        corner_angle = np.abs(edge_set[0] - edge_set[1])
-        print("The difference between their angles is", corner_angle)
-        if corner_angle >= 1.518 and corner_angle <= 1.623:
-            print("That's close to 90 degrees, so I think I'll use it for alignment.")
-            rotated = imutils.rotate(image, (180/np.pi) * edge_set[0])
-            print("How does this look?")
-            cv2.imshow("Rotated image", rotated)
-            cv2.waitKey()
+    # # If exactly 2 outer edges found, determine whether intersection is likely to be a corner
+    # elif len(edge_set) == 2:
+    #     print("I found outer edges at angles", edge_set[0][1], "and", edge_set[1][1])
+    #     corner_angle = np.abs(edge_set[0][1] - edge_set[1][1])
+    #     print("The difference between their angles is", corner_angle)
+    #     if corner_angle >= 1.518 and corner_angle <= 1.623:
+    #         print("That's close to 90 degrees, so I think I'll use it for alignment.")
+    #         rotated = imutils.rotate(image, (180/np.pi) * edge_set[0][1])
+    #         print("How does this look?")
+    #         cv2.imshow("Rotated image", rotated)
+    #         cv2.waitKey()
+    # else:
+    #     print(f"So many edges! I'm just gonna go with {edge_set[0][1]}.")
+    #     doit = dangle + (shift[int(bangle)][0] if edge_set[0][0] < 0 else shift[int(bangle)][1])
+    #     rotated = imutils.rotate(image, doit)
+    #     cv2.imshow("Rotated Image", rotated)
+    #     cv2.waitKey()
+
+    if edge_set[0][0] < 0:
+        doit = dangle + shift[int(bangle)][0]
     else:
-        rotated = imutils.rotate(image, dangle + shift[int(bangle)])
-        cv2.imshow("Rotated Image", rotated)
-        cv2.waitKey()
+        doit = dangle + shift[int(bangle)][1]
+    rotated = imutils.rotate(image, doit)
+    # for a in range(0, 360, 1):
+    #     cv2.imshow(f"Hork bork {a}", imutils.rotate(image, a))
+    #     cv2.waitKey()
+    cv2.imshow("Rotated Image", rotated)
+    cv2.waitKey()
+    # imutils rotation usage based on code by Adrian Rosebrock at pyimagesearch.com
+    # https://www.pyimagesearch.com/2017/01/02/rotate-images-correctly-with-opencv-and-python/
+
     return rotated
 
 def main():
