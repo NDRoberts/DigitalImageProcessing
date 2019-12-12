@@ -70,6 +70,13 @@ def get_outer_edges(image):
     grays = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     min_threshold = 253
     max_threshold = 255
+
+    # mupp = threshalize(grays, min_threshold)
+    # medges = cv2.Canny(mupp, min_threshold, max_threshold, aptertureSize=3)
+    # mlin = cv2.HoughLines(medges, 1, np.pi / 180, 1)
+    # cv2.imshow("Linges", mlin)
+    # cv2.waitKey()
+
     edges = cv2.Canny(grays, min_threshold, max_threshold, apertureSize=3)
     outer_edges = []
     # Use linear Hough transform to find lines in the image
@@ -187,9 +194,10 @@ def get_outer_edges(image):
                 # print(f"I am confident that line {ln} is an outer edge.")
                 outer_edges.append((rho, theta))
             print(f"Angle of current line: {theta}")
-            # cv2.line(visual,(x1,y1),(x2,y2),(0,0,255),2)
+            # cv2.line(visual,(x1,y1),(x2,y2),(255,0,255),2)
             # cv2.imshow(f'img {ln}', visual)
             # cv2.waitKey()
+    # cv2.imwrite('./results/lines_found.png', visual)
 
     return outer_edges
 
@@ -282,9 +290,22 @@ def align(image, edge_set):
 
     return rotated
 
+
+# def threshalize(image, min_val):
+#     height, width = image.shape[0:2]
+#     bin = np.zeros((height, width))
+#     for x in range(height):
+#         for y in range(width):
+#             if image[x,y] < min_val:
+#                 bin[x,y] = 255
+#     cv2.imshow("Threshy", bin)
+#     cv2.waitKey()
+#     return bin
+
+
 def main():
     # Load the images in a directory, align them, write to output folder
-    image_list = glob.glob('./images/*.png')
+    image_list = glob.glob('./Unsorted/*.jpg')
     image_list.sort()
     image_set = [cv2.imread(img) for img in image_list]
     # Sorting/reading based on code by StackOverflow user ClydeTheGhost
