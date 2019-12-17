@@ -305,7 +305,7 @@ def align(image, edge_set):
 
 def main():
     # Load the images in a directory, align them, write to output folder
-    image_list = glob.glob('./Unsorted/*.jpg')
+    image_list = glob.glob('./test_images/*.png')
     image_list.sort()
     image_set = [cv2.imread(img) for img in image_list]
     # Sorting/reading based on code by StackOverflow user ClydeTheGhost
